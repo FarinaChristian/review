@@ -1,9 +1,9 @@
 from constants.settings import Num_of_chirp_loops
 from decoders.AWR1243 import AWR1243
 import numpy as np
-from scipy.signal import ellip,filtfilt
+from scipy.signal import ellip,filtfilt, find_peaks
 import matplotlib.pyplot as plt
-from utils.processing import dominant_freq_fft2
+from utils.processing import dominant_freq_fft2, music
 # 10.1109RCAR65431.2025.11139413
 FS=25
  
@@ -36,10 +36,11 @@ def estimate_breath_rate(data,antenna):
     #create a new array containing all the elements divided by 1000, used to remove useless values
     supporto = np.abs(trans) // 1000
     supporto[:, 0] = 0
+    arr=supporto.mean(axis=0)
     #print(" ".join(f"{i:.2f}" for i in supporto.mean(axis=0)))
 
-    peaks=np.argpartition(supporto.mean(axis=0), -2)[-2:]# trovo i due picchi più alti (così dice l'articolo)
-    peaks.sort()
+    peaks, _ = find_peaks(arr)
+    peaks = sorted(peaks, key=lambda i: arr[i], reverse=True)[:2]# trovo i due picchi più alti (così dice l'articolo)
     print(antenna,"Peak:",*peaks)
     
     # ho solo 2 picchi (il paper lo prova su due persone), quindi posso fare tutto in sequenza, non serve il for
@@ -66,9 +67,9 @@ def printResult(adc_data,numFrames,isSingleFile):
             matriceBr1[2],matriceHr1[2],matriceBr2[2],matriceHr2[2] = estimate_breath_rate(acc2,"ANTENNA 3")    
             matriceBr1[3],matriceHr1[3],matriceBr2[3],matriceHr2[3] = estimate_breath_rate(acc3,"ANTENNA 4")
 
-            br1, _ , _=dominant_freq_fft2(matriceBr1,FS, 0.1, 0.5)
+            br1, _ , _= music(matriceBr1,FS)
             hr1, _ , _=dominant_freq_fft2(matriceHr1,FS, 0.8, 2)
-            br2, _ , _=dominant_freq_fft2(matriceBr2,FS, 0.1, 0.5)
+            br2, _ , _=music(matriceBr2,FS)
             hr2, _ , _=dominant_freq_fft2(matriceHr2,FS, 0.8, 2)
 
             print("BR1",br1*60,"HR1",hr1*60)
@@ -83,7 +84,7 @@ def printResult(adc_data,numFrames,isSingleFile):
 
 def main():
     decoder = AWR1243()
-    path="C:/Users/crist/Desktop/registrazioni/p1p2p3/*"
+    path="C:/Users/crist/Desktop/registrazioni/ailati/*"
     adc_data = decoder.decode(path)
     print(adc_data.shape)
     if path.endswith("*"):
