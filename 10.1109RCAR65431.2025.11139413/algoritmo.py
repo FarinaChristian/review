@@ -14,7 +14,7 @@ def preparePhase(phaseMatrix,peak):
     phase_unwrapped=np.unwrap(arrPhase)
     phase_diff=np.diff(phase_unwrapped)# it contains the vital signs in the time domain
 
-    #filtro media con finestra grande 10
+    #average filter, window=10
     mediato=np.convolve(phase_diff,np.ones(10)/10,mode='same')
 
     b,a=ellip(4,1,40,[0.1/(FS*0.5),0.5/(FS*0.5)],btype='bandpass')
@@ -40,14 +40,14 @@ def estimate_breath_rate(data,antenna):
     #print(" ".join(f"{i:.2f}" for i in supporto.mean(axis=0)))
 
     peaks, _ = find_peaks(arr)
-    peaks = sorted(peaks, key=lambda i: arr[i], reverse=True)[:2]# trovo i due picchi più alti (così dice l'articolo)
+    peaks = sorted(peaks, key=lambda i: arr[i], reverse=True)[:2]# I find the two highest peaks (according to the article)
     print(antenna,"Peak:",*peaks)
     
-    # ho solo 2 picchi (il paper lo prova su due persone), quindi posso fare tutto in sequenza, non serve il for
+    # I have only two peaks (two people), the article tries the algorithm with two people. We don't need a for cycle
     respiroP1,cuoreP1=preparePhase(phase,peaks[0])
     respiroP2,cuoreP2=preparePhase(phase,peaks[1])
 
-    return respiroP1,cuoreP1,respiroP2,cuoreP2 # the array is as long as the number of people
+    return respiroP1,cuoreP1,respiroP2,cuoreP2 # I return the BR and HR signals of two people
 
 # it prints the final results considering all individuals
 def printResult(adc_data,numFrames,isSingleFile):
