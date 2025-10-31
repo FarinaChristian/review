@@ -42,10 +42,11 @@ def estimate_breath_rate(data):
     differenza=np.diff(phase_unwrapped)
     filtered_signal_B = band_pass_filter_1d(differenza,FS, 0.1, 0.5)
 
+    # this is the new part described in the article
     U=remove_baseline_drift(phase_unwrapped,35)
     filt=pa.filters.FilterRLS(4,mu=0.99,w="random")
     X=pa.input_from_history(filtered_signal_B,4)
-    y,e,w=filt.run(U[4:],X)# e dovrebbe essere U-y
+    y,e,w=filt.run(U[4:],X)# e is U-y
     phase_diff = np.diff(e) 
     
     picchiH,_, _ = music_respiration(phase_diff)
@@ -59,8 +60,8 @@ def printResult(adc_data,numFrames,isSingleFile):
     cont=0
     for frame in adc_data:
         accs = [acc, acc1, acc2, acc3]
-        for i in range(4): # 4 è il numero di antenne
-            accs[i] += list(frame[:, :, i]) #prendo le colonne identificate dal numero dell'antenna 1,2,3 e 4
+        for i in range(4): # 4 antennas
+            accs[i] += list(frame[:, :, i]) #I get the columns identified by the index of the antenna
 
         cont+=1
         if cont==numFrames:
