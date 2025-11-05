@@ -16,3 +16,4 @@ To run the code, move the .py files from those directories into the same directo
 | TI IWR1843BOOST                                          | 2024 |https://doi.org/10.1145/3699766           |No |
 | IWR1443BOOST                                             | 2024 |https://doi.org/10.1038/s41598-024-77683-1|Yes|
 | TI IWR6843ISK                                            | 2025 |10.1109/RCAR65431.2025.11139413           |Yes|
+| IWR1642BOOST                                             | 2025 |https://doi.org/10.1038/s41598-025-09112-w|Yes|
