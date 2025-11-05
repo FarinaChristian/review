@@ -4,7 +4,7 @@ To run the code, move the .py files from those directories into the same directo
 
 ## Papers
 
-| Devicw        | Year          | DOI          | Implemented |
+| Device        | Year          | DOI          | Implemented |
 | ------------- |:-------------:| -------------|-------------| 
 | (DSP/FPGA) board                                         | 2019 |10.1038/s41928-019-0258-6                 |No |
 | AWR1642                                                  | 2020 |10.3390/s20102999                         |No |
