@@ -1,8 +1,6 @@
-from constants.settings import Num_range_fft_bins, Num_doppler_fft_bins, Sample_per_chirp, Num_of_chirp_loops
+from constants.settings import Num_of_chirp_loops
 from decoders.AWR1243 import AWR1243
 import numpy as np
-from scipy.signal import butter,find_peaks,lfilter
-import matplotlib.pyplot as plt
 from utils.processing import music_respiration, remove_baseline_drift,band_pass_filter_1d
 import padasip as pa
 
@@ -51,11 +49,10 @@ def estimate_breath_rate(data):
     
     picchiH,_, _ = music_respiration(phase_diff)
     
-    return calculateRate(filtered_signal_B),picchiH*60
+    return picchiH*60,calculateRate(filtered_signal_B)
 
 # it prints the final result
-def printResult(adc_data,numFrames,isSingleFile):
-    numFrames= len(adc_data) if isSingleFile else numFrames
+def printResult(adc_data,numFrames):
     acc,acc1,acc2,acc3=[],[],[],[]
     cont=0
     for frame in adc_data:
@@ -82,21 +79,12 @@ def printResult(adc_data,numFrames,isSingleFile):
 
 def main():
     decoder = AWR1243()
-    path="C:/Users/crist/Desktop/registrazioni/p1in12/*"
+    path="C:/Users/crist/Desktop/registrazioni/brBassa/*"
     adc_data = decoder.decode(path)
     print(adc_data.shape)
-    if path.endswith("*"):
-        printResult(adc_data,3000,False)
-    else:
-        printResult(adc_data,None,True)
+    printResult(adc_data,adc_data.shape[0])
             
     print("Finished")
    
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
