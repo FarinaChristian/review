@@ -41,6 +41,7 @@ def estimate_breath_rate(data,antenna):
 
     peaks, _ = find_peaks(arr)
     peaks = sorted(peaks, key=lambda i: arr[i], reverse=True)[:2]# I find the two highest peaks (according to the article)
+    peaks.sort()
     print(antenna,"Peak:",*peaks)
     
     # I have only two peaks (two people), the article tries the algorithm with two people. We don't need a for cycle
