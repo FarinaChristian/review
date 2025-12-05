@@ -3,81 +3,48 @@ from decoders.AWR1243 import AWR1243
 import numpy as np
 import pywt
 from scipy.signal import welch
+from utils.processing import band_pass_filter_1d
+import matplotlib.pyplot as plt
 
 # https://doi.org/10.1038/s41598-025-09112-w
 
 FS=25
 
-def estimate_rates(resp, heart, fs, threshold=0.01):
-    f_r, Pxx_r = welch(resp, fs)
-    f_h, Pxx_h = welch(heart, fs)
-
-    # Respirazione: 0.1 - 0.5 Hz
-    mask_r = (f_r > 0.1) & (f_r < 0.5)
-    resp_freq = f_r[mask_r][np.argmax(Pxx_r[mask_r])]
-    resp_rate = resp_freq * 60
+def kalman_filter(signal, Q=1e-5, R=0.01):
+    """
+    Filtro di Kalman 1D adattivo per smussare un segnale.
     
-    # Battito cardiaco: 0.8 - 2 Hz
-    mask_h = (f_h > 0.8) & (f_h < 2.0)
-    peak = np.max(Pxx_h[mask_h])
-
-    if peak < threshold:
-        heart_rate = None   # come nel paper: battito non affidabile
-    else:
-        heart_freq = f_h[mask_h][np.argmax(Pxx_h[mask_h])]
-        heart_rate = heart_freq * 60
+    signal : np.array
+        Segnale da filtrare.
+    Q : float
+        Varianza del processo (quanto il segnale può cambiare tra i campioni).
+    R : float
+        Varianza del rumore (quanto rumore è presente nel segnale).
     
-    return resp_rate, heart_rate
+    Restituisce:
+    filtered_signal : np.array
+        Segnale filtrato.
+    """
+    n = len(signal)
+    x_est = np.zeros(n)  # stima del segnale
+    P = np.zeros(n)      # errore di stima
+    K = np.zeros(n)      # guadagno di Kalman
 
-# Kalman filtering
-def akf(signal, Q=1e-5, R=0.01):
-    x = 0
-    P = 1
-    filtered = []
+    # Inizializzazione
+    x_est[0] = signal[0]
+    P[0] = 1.0
 
-    for z in signal:
-        # Predict
-        x = x
-        P = P + Q
-        
-        # Update
-        K = P / (P + R)
-        x = x + K * (z - x)
-        P = (1 - K) * P
-        
-        filtered.append(x)
-    return np.array(filtered)
+    for k in range(1, n):
+        # Predizione
+        x_pred = x_est[k-1]
+        P_pred = P[k-1] + Q
 
-def extract_respiration_and_heartbeat(phase, wavelet='db5', max_level=4):
-    # Determine how many levels are actually possible
-    level = min(max_level, pywt.dwt_max_level(len(phase), pywt.Wavelet(wavelet).dec_len))
-    
-    # Valid decomposition
-    coeffs = pywt.wavedec(phase, wavelet, level=level)
-    
-    # coeffs = [A_level, D_level, D_{level-1}, ..., D1]
-    # Respiratory reconstruction (A-level only)
-    resp_coeffs = [coeffs[0]] + [None] * level
-    respiration = pywt.waverec(resp_coeffs, wavelet)
+        # Aggiornamento
+        K[k] = P_pred / (P_pred + R)
+        x_est[k] = x_pred + K[k] * (signal[k] - x_pred)
+        P[k] = (1 - K[k]) * P_pred
 
-    # heartbeat reconstruction (solo D3 se esiste)
-    # if level < 3, we adapt automatically
-    heartbeat_coeffs = [None] + [None] * (level - 3) + [coeffs[-3]] + [None] * 2 if level >= 3 else None
-
-    if level >= 3:
-        heartbeat_coeffs = [None] + [None] * (level - 3) + [coeffs[-3]] + [None] * 2
-        heartbeat = pywt.waverec(heartbeat_coeffs, wavelet)
-    else:
-        # fallback: get the highest detail available
-        heartbeat = pywt.waverec([None] + coeffs[1:], wavelet)
-
-    return respiration, heartbeat
-
-def coherent_accumulation(support, num_pulses):
-    support = np.asarray(support)
-    N = len(support) // num_pulses
-    support = support[:N * num_pulses].reshape(num_pulses, N)
-    return np.mean(support, axis=0)
+    return x_est
 
 def estimate_breath_rate(data):
     # Step 1: FTT
@@ -96,15 +63,34 @@ def estimate_breath_rate(data):
 
     # I get the signal in the index corresponding to the chest
     signal = fft[:, idx_max] 
-    signal=coherent_accumulation(signal,32) # I don't Know how to set this parameter
     phase_unwrapped=np.unwrap(np.angle(signal))
     phase_diff=np.diff(phase_unwrapped) 
 
-    filtered_signal_H,filtered_signal_B = extract_respiration_and_heartbeat(phase_diff)   
-    resp=akf(filtered_signal_B)
-    heart=akf(filtered_signal_H / (np.sqrt(np.mean(filtered_signal_H**2)) + 1e-8))
+    # 1. Decomposizione DWT multilevel
+    coeffs = pywt.wavedec(phase_diff, 'db4', level=4)
+    # coeffs = [A4, D4, D3, D2, D1]
+
+    # 2. Segnale del respiro (basse frequenze) → approssimazione A4
+    A4 = coeffs[0]
+    coeffs_respiro = [A4] + [np.zeros_like(c) for c in coeffs[1:]]
+    segnale_respiro = pywt.waverec(coeffs_respiro, 'db4')
+
+    # 3. Segnale del cuore (frequenze medie) → dettaglio D3
+    D3 = coeffs[-3]  # D3
+    coeffs_cuore = [np.zeros_like(c) for c in coeffs]
+    coeffs_cuore[-3] = D3
+    segnale_cuore = pywt.waverec(coeffs_cuore, 'db4')
+
+    segnale_respiro_filtrato = kalman_filter(segnale_respiro)
+    segnale_cuore_filtrato = kalman_filter(segnale_cuore)
+
+    # 1. PSD del segnale respiratorio
+    f_respiro, Pxx_respiro = welch(segnale_respiro_filtrato, fs=FS, nperseg=1024)
+
+    # 2. PSD del segnale cardiaco
+    f_cuore, Pxx_cuore = welch(segnale_cuore_filtrato, fs=FS, nperseg=1024)
     
-    return estimate_rates(resp,heart,FS)
+    return f_cuore[np.argmax(Pxx_cuore)]*60,f_respiro[np.argmax(Pxx_respiro)]*60
 
 # it prints the final result
 def printResult(adc_data,numFrames):
@@ -134,7 +120,7 @@ def printResult(adc_data,numFrames):
 
 def main():
     decoder = AWR1243()
-    path="C:/Users\crist/Desktop/registrazioni/brAlta/*"
+    path="C:/Users\crist/Desktop/registrazioni/christian6/*"
     adc_data = decoder.decode(path)
     print(adc_data.shape)
     printResult(adc_data,adc_data.shape[0])     
