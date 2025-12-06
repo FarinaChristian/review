@@ -65,6 +65,8 @@ def estimate_breath_rate(data):
     signal = fft[:, idx_max] 
     phase_unwrapped=np.unwrap(np.angle(signal))
     phase_diff=np.diff(phase_unwrapped) 
+    phase_diff=phase_diff-np.mean(phase_diff) # DC offset removal?
+    phase_diff=phase_diff*10 # coherent accumulation?
 
     # 1. Decomposizione DWT multilevel
     coeffs = pywt.wavedec(phase_diff, 'db4', level=4)
@@ -84,11 +86,14 @@ def estimate_breath_rate(data):
     segnale_respiro_filtrato = kalman_filter(segnale_respiro)
     segnale_cuore_filtrato = kalman_filter(segnale_cuore)
 
+    #square root normalisation?
+
     # 1. PSD del segnale respiratorio
     f_respiro, Pxx_respiro = welch(segnale_respiro_filtrato, fs=FS, nperseg=1024)
 
     # 2. PSD del segnale cardiaco
     f_cuore, Pxx_cuore = welch(segnale_cuore_filtrato, fs=FS, nperseg=1024)
+    f_cuore[np.argmax(Pxx_cuore)]*60
     
     return f_cuore[np.argmax(Pxx_cuore)]*60,f_respiro[np.argmax(Pxx_respiro)]*60
 
@@ -120,7 +125,7 @@ def printResult(adc_data,numFrames):
 
 def main():
     decoder = AWR1243()
-    path="C:/Users\crist/Desktop/registrazioni/christian6/*"
+    path="C:/Users/crist/Desktop/registrazioni/christian2/*"
     adc_data = decoder.decode(path)
     print(adc_data.shape)
     printResult(adc_data,adc_data.shape[0])     
