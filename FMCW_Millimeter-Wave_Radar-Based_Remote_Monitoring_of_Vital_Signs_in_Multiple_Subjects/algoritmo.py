@@ -3,7 +3,7 @@ from decoders.AWR1243 import AWR1243
 import numpy as np
 from scipy.signal import ellip,filtfilt, find_peaks
 import matplotlib.pyplot as plt
-from utils.processing import dominant_freq_fft2, music
+from utils.processing import dominant_freq_fft2, music_respiration
 # 10.1109RCAR65431.2025.11139413
 FS=25
  
@@ -14,13 +14,10 @@ def preparePhase(phaseMatrix,peak):
     phase_unwrapped=np.unwrap(arrPhase)
     phase_diff=np.diff(phase_unwrapped)# it contains the vital signs in the time domain
 
-    #average filter, window=10
-    mediato=np.convolve(phase_diff,np.ones(10)/10,mode='same')
-
     b,a=ellip(4,1,40,[0.1/(FS*0.5),0.5/(FS*0.5)],btype='bandpass')
-    filtered_signal_B = filtfilt(b,a,mediato) 
+    filtered_signal_B = filtfilt(b,a,phase_diff) 
     b,a=ellip(4,1,40,[0.8/(FS*0.5),2/(FS*0.5)],btype='bandpass')
-    filtered_signal_H = filtfilt(b,a,mediato) 
+    filtered_signal_H = filtfilt(b,a,phase_diff) 
 
     return filtered_signal_B,filtered_signal_H
 
@@ -51,8 +48,7 @@ def estimate_breath_rate(data,antenna):
     return respiroP1,cuoreP1,respiroP2,cuoreP2 # I return the BR and HR signals of two people
 
 # it prints the final results considering all individuals
-def printResult(adc_data,numFrames,isSingleFile):
-    numFrames= len(adc_data) if isSingleFile else numFrames
+def printResult(adc_data,numFrames):
     acc,acc1,acc2,acc3=[],[],[],[]
     cont=0
     matriceBr1,matriceHr1,matriceBr2,matriceHr2=np.empty((4,numFrames-1)),np.empty((4,numFrames-1)),np.empty((4,numFrames-1)),np.empty((4,numFrames-1))
@@ -68,9 +64,9 @@ def printResult(adc_data,numFrames,isSingleFile):
             matriceBr1[2],matriceHr1[2],matriceBr2[2],matriceHr2[2] = estimate_breath_rate(acc2,"ANTENNA 3")    
             matriceBr1[3],matriceHr1[3],matriceBr2[3],matriceHr2[3] = estimate_breath_rate(acc3,"ANTENNA 4")
 
-            br1, _ , _= music(matriceBr1,FS)
+            br1, _ , _= music_respiration(matriceBr1.mean(axis=0),FS)
             hr1, _ , _=dominant_freq_fft2(matriceHr1,FS, 0.8, 2)
-            br2, _ , _=music(matriceBr2,FS)
+            br2, _ , _=music_respiration(matriceBr2.mean(axis=0),FS)
             hr2, _ , _=dominant_freq_fft2(matriceHr2,FS, 0.8, 2)
 
             print("BR1",br1*60,"HR1",hr1*60)
@@ -85,14 +81,10 @@ def printResult(adc_data,numFrames,isSingleFile):
 
 def main():
     decoder = AWR1243()
-    path="C:/Users/crist/Desktop/registrazioni/ailati/*"
+    path="C:/Users/crist/Desktop/registrazioni/muhamad-yosef/*"
     adc_data = decoder.decode(path)
     print(adc_data.shape)
-    if path.endswith("*"):
-        printResult(adc_data,3000,False)
-    else:
-        printResult(adc_data,None,True)
-            
+    printResult(adc_data,adc_data.shape[0])
     print("Finished")
    
 if __name__ == '__main__':
