@@ -87,57 +87,90 @@ def music_respiration(sig, fs=25, M=150, num_sources=1, n_freqs=1000):
     
     return freq_peak, freqs, spectrum
 
-def dominant_freq_fft2(sig, fs=25, f_min=0.1, f_max=0.5):
-    # --- Step 1: rimuovi DC su ogni canale ---
-    sig_centered = sig - np.mean(sig, axis=1, keepdims=True)
+def dominant_freq_fft2(sig, fs=25, f_min=0.1, f_max=0.5, zp_factor=8):
     
-    # --- Step 2: FFT 2D ---
-    fft2_vals = np.fft.fft2(sig_centered)
-    mag = np.abs(fft2_vals)
+    num_sensors, N = sig.shape
+
+    # --- 1) Rimozione DC ---
+    sig = sig - np.mean(sig, axis=1, keepdims=True)
     
-    # --- Step 3: somma energia lungo i canali (righe) ---
-    spectrum = mag.sum(axis=0)  # spettro 1D lungo il tempo
+    # --- 2) Finestratura ---
+    window = np.hanning(N)
+    sig = sig * window[None, :]
+
+    # --- 3) FFT temporale con zero padding ---
+    Nfft = zp_factor * N   # interpolazione spettrale
+    fft_vals = np.fft.rfft(sig, n=Nfft, axis=1)
     
-    # --- Step 4: frequenze associate ---
-    N = sig.shape[1]
-    freqs = np.fft.fftfreq(N, d=1/fs)[:N//2]
-    spectrum = spectrum[:N//2]
-    
-    # --- Step 5: limita al range fisiologico ---
+    # --- 4) Power spectrum multi-canale ---
+    spectrum = np.sum(np.abs(fft_vals)**2, axis=0)
+
+    # --- 5) Frequenze ---
+    freqs = np.fft.rfftfreq(Nfft, 1/fs)
+
+    # --- 6) Maschera fisiologica ---
     mask = (freqs >= f_min) & (freqs <= f_max)
-    idx_peak = np.argmax(spectrum[mask])
-    freq_peak = freqs[mask][idx_peak]
-    
+
+    spectrum_masked = spectrum[mask]
+    freqs_masked = freqs[mask]
+
+    # --- 7) Picco grezzo ---
+    k = np.argmax(spectrum_masked)
+
+    # --- 8) Interpolazione parabolica del picco ---
+    if 1 <= k < len(spectrum_masked)-1:
+        y0, y1, y2 = spectrum_masked[k-1:k+2]
+        d = 0.5 * (y0 - y2) / (y0 - 2*y1 + y2)
+        freq_peak = freqs_masked[k] + d * (freqs_masked[1] - freqs_masked[0])
+    else:
+        freq_peak = freqs_masked[k]
+
     return freq_peak, freqs, spectrum
 
 
-def music(sig_matrix, fs=25, M=150, num_sources=1, n_freqs=1000):
-    num_sensori, N = sig_matrix.shape
+def music(sig_matrix, fs=25, M=150, num_sources=1, n_freqs=10000):
 
-    # --- Step 1: Costruzione Hankel per ciascun sensore ---
-    X_all = []
+    num_sensors, N = sig_matrix.shape
+    L = N - M + 1
+
+    # --- 1) Hankel per ogni sensore ---
+    covariances = []
+
     for sig in sig_matrix:
-        # Hankel per questo segnale
-        X = np.array([sig[i:N-M+i+1] for i in range(M)])
-        X_all.append(X)
-    # Concateno tutte le righe insieme
-    X_all = np.vstack(X_all)  # dimensione totale: num_sensori*M × (N-M+1)
+        X = np.zeros((M, L), dtype=complex)
+        for i in range(M):
+            X[i] = sig[i:i+L]
 
-    # --- Step 2: Covarianza e sottospazio del rumore ---
-    R = X_all @ X_all.conj().T / X_all.shape[1]
+        # Covarianza del singolo sensore
+        R = X @ X.conj().T / L
+        covariances.append(R)
+
+    # --- 2) Media delle covarianze ---
+    R = sum(covariances) / num_sensors
+
+    # Stabilizzazione numerica
+    R += 1e-10 * np.eye(M)
+
+    # --- 3) Decomposizione autovalori ---
     eigvals, eigvecs = np.linalg.eigh(R)
     idx = np.argsort(eigvals)[::-1]
     eigvecs = eigvecs[:, idx]
-    E_n = eigvecs[:, num_sources:]  # noise subspace
 
-    # --- Step 3: Spettro MUSIC ---
+    E_n = eigvecs[:, num_sources:]   # noise subspace
+
+    # --- 4) MUSIC spectrum ---
     freqs = np.linspace(0, fs/2, n_freqs)
-    M_total = X_all.shape[0]  # numero totale di righe
-    A = np.exp(-1j * 2 * np.pi * np.outer(np.arange(M_total), freqs/fs))
-    v = E_n.conj().T @ A
-    spectrum = 1 / np.sum(np.abs(v)**2, axis=0)
 
-    # --- Step 4: Frequenza dominante ---
+    m = np.arange(M)
+    A = np.exp(-1j * 2*np.pi * m[:,None] * freqs / fs)
+
+    proj = E_n.conj().T @ A
+    spectrum = 1 / np.sum(np.abs(proj)**2, axis=0)
+
+    # Normalizzazione
+    spectrum /= spectrum.max()
+
+    # --- 5) Picco ---
     idx_peak = np.argmax(spectrum)
     freq_peak = freqs[idx_peak]
 
