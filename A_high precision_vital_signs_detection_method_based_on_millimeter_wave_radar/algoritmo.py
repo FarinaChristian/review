@@ -49,7 +49,7 @@ def estimate_breath_rate(data):
     
     picchiH,_, _ = music_respiration(phase_diff)
     
-    return picchiH*60,calculateRate(filtered_signal_B)
+    return picchiH,calculateRate(filtered_signal_B)
 
 # it prints the final result
 def printResult(adc_data,numFrames):
