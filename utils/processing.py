@@ -83,7 +83,7 @@ def music_respiration(sig, fs=25, M=150, num_sources=1, n_freqs=1000):
     
     # --- Step 5: Frequenza dominante ---
     idx_peak = np.argmax(spectrum)
-    freq_peak = freqs[idx_peak]
+    freq_peak = freqs[idx_peak]*60
     
     return freq_peak, freqs, spectrum
 
