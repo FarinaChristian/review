@@ -3,7 +3,7 @@ from decoders.AWR1243 import AWR1243
 import numpy as np
 from scipy.signal import ellip,filtfilt, find_peaks
 import matplotlib.pyplot as plt
-from utils.processing import dominant_freq_fft2, music_respiration
+from utils.processing import dominant_freq_fft2, music
 # 10.1109RCAR65431.2025.11139413
 FS=25
  
@@ -64,9 +64,9 @@ def printResult(adc_data,numFrames):
             matriceBr1[2],matriceHr1[2],matriceBr2[2],matriceHr2[2] = estimate_breath_rate(acc2,"ANTENNA 3")    
             matriceBr1[3],matriceHr1[3],matriceBr2[3],matriceHr2[3] = estimate_breath_rate(acc3,"ANTENNA 4")
 
-            br1, _ , _= music_respiration(matriceBr1.mean(axis=0),FS)
+            br1, _ , _= music(matriceBr1.mean(axis=0),FS)
             hr1, _ , _=dominant_freq_fft2(matriceHr1,FS, 0.8, 2)
-            br2, _ , _=music_respiration(matriceBr2.mean(axis=0),FS)
+            br2, _ , _=music(matriceBr2.mean(axis=0),FS)
             hr2, _ , _=dominant_freq_fft2(matriceHr2,FS, 0.8, 2)
 
             print("BR1",br1*60,"HR1",hr1*60)
