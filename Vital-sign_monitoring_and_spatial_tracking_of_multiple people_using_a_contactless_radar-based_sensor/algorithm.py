@@ -145,7 +145,7 @@ def estimate_breath_rate(data):
                                                      # you perform the phase diff, you can extract the vital parameters
 
     window = int(FS * 60.0)      
-    step   = int(FS * 60.0)      
+    step   = 10      
 
     resp_segments = []
     heart_segments = []
