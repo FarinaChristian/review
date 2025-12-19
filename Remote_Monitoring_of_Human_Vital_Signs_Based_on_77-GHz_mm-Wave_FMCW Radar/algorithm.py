@@ -120,7 +120,6 @@ def estimate_breath_rate(data):
     resp2= cs_omp_respirazione(filtered_signal_B)
     BR = np.correlate(resp, resp2, mode='full')
     
-    # THIS IS MY OLD ALGORITHM, YOU NEED TO RETURN THE RESULTS OBTAINED BY THE AUTOCORRELATION METHOD DESCRIBED IN THE ARTICLE
     return calculateRate(HR),calculateRate(BR) 
 
 # it prints the final result
