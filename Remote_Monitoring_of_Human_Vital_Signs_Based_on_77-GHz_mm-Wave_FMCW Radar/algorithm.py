@@ -2,13 +2,76 @@ from constants.settings import Num_of_chirp_loops
 from decoders.AWR1243 import AWR1243
 import numpy as np
 from scipy.signal import ellip,filtfilt
+from sklearn.linear_model import OrthogonalMatchingPursuit
+from scipy.fftpack import idct
+import pywt
 
 '''
 This code contains an algorithm for extracting vital signs from some files recorded with an FMCW radar. 
 The work consists of completing some missing parts. (You can find the explanation of the missing parts in the article)
 '''
 
-FS=20
+FS=25
+
+def dwt(x, wavelet='db5', level=5, livelli_cuore=(3,4)):
+
+    # Decomposizione wavelet
+    coeffs = pywt.wavedec(x, wavelet, level=level)
+
+    # Costruzione componente respiratoria (solo approssimazione finale)
+    c_resp = [coeffs[0]] + [np.zeros_like(c) for c in coeffs[1:]]
+    resp = pywt.waverec(c_resp, wavelet)
+
+    # Costruzione componente cardiaca (solo i dettagli indicati)
+    c_heart = []
+    for i, c in enumerate(coeffs):
+        # coeffs[0] = approssimazioni => metti sempre zero
+        if i == 0:
+            c_heart.append(np.zeros_like(c))
+        else:
+            # i=1 → cD(level), i=2 → cD(level-1), ecc.
+            livello_detail = level - i + 1
+            if livello_detail in livelli_cuore:
+                c_heart.append(coeffs[i])
+            else:
+                c_heart.append(np.zeros_like(c))
+    cuore = pywt.waverec(c_heart, wavelet)
+
+    return resp, cuore
+
+def cs_omp_respirazione(resp,compression_ratio=0.3,n_nonzero_coefs=10,random_state=None):
+    resp = np.asarray(resp)
+    N = resp.shape[0]
+    # -------------------------
+    # Sottocampionamento
+    # -------------------------
+    rng = np.random.default_rng(random_state)
+    M = int(compression_ratio * N)
+    idx = np.sort(rng.choice(N, M, replace=False))
+
+    Phi = np.zeros((M, N))
+    Phi[np.arange(M), idx] = 1
+    y = Phi @ resp
+
+    # -------------------------
+    # Dizionario sparso (DCT)
+    # -------------------------
+    Psi = idct(np.eye(N), norm='ortho')
+    A = Phi @ Psi
+    # -------------------------
+    # OMP
+    # -------------------------
+    omp = OrthogonalMatchingPursuit(n_nonzero_coefs=n_nonzero_coefs)
+
+    omp.fit(A, y)
+    x_hat = omp.coef_
+
+    # -------------------------
+    # Ricostruzione
+    # -------------------------
+    risultato = Psi @ x_hat
+
+    return risultato # signal in the time domain
 
 def calculateRate(filtrato):
     phaseFFT=np.fft.fft(filtrato)
@@ -53,12 +116,12 @@ def estimate_breath_rate(data):
     b,a=ellip(4,1,40,[0.8/(FS*0.5),2/(FS*0.5)],btype='bandpass')
     filtered_signal_H = filtfilt(b,a,phase_diff)   
 
-    #-----------------------------------------------------
-    # HERE YOU NEED TO APPLY CS-OMP RECONSTRUCTION AND DWT
-    #-----------------------------------------------------
+    resp, HR=dwt(phase_diff)
+    resp2= cs_omp_respirazione(filtered_signal_B)
+    BR = np.correlate(resp, resp2, mode='full')
     
     # THIS IS MY OLD ALGORITHM, YOU NEED TO RETURN THE RESULTS OBTAINED BY THE AUTOCORRELATION METHOD DESCRIBED IN THE ARTICLE
-    return calculateRate(filtered_signal_H),calculateRate(filtered_signal_B) 
+    return calculateRate(HR),calculateRate(BR) 
 
 # it prints the final result
 def printResult(adc_data,numFrames):
@@ -88,7 +151,7 @@ def printResult(adc_data,numFrames):
 
 def main():
     decoder = AWR1243()
-    path="data/*"
+    path="C:/Users/crist/Desktop/registrazioni/christian4/*"
     adc_data = decoder.decode(path)
     print(adc_data.shape)
     printResult(adc_data,adc_data.shape[0])
