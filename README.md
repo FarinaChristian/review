@@ -7,7 +7,7 @@ To run the code, move the .py files from those directories into the same directo
 | Device        | Year          | DOI          | Implemented |
 | ------------- |:-------------:| -------------|-------------| 
 | (DSP/FPGA) board                                         | 2019 |10.1038/s41928-019-0258-6                 |Yes|
-| AWR1642                                                  | 2020 |10.3390/s20102999                         |No (Hongjia)|
+| AWR1642                                                  | 2020 |10.3390/s20102999                         |Yes (Hongjia)|
 | TI IWR6843                                               | 2020 |10.1109/ICRA40945.2020.9197437            |No (deep learning)|
 | TI board                                                 | 2021 |https://doi.org/10.1145/3478090           |Yes (only static)|
 | TI AWR1642Boost                                          | 2021 |https://doi.org/10.1145/3478127           |No (deep learning)|
