@@ -6,11 +6,6 @@ from sklearn.linear_model import OrthogonalMatchingPursuit
 from scipy.fftpack import idct
 import pywt
 
-'''
-This code contains an algorithm for extracting vital signs from some files recorded with an FMCW radar. 
-The work consists of completing some missing parts. (You can find the explanation of the missing parts in the article)
-'''
-
 FS=25
 
 def dwt(x, wavelet='db5', level=5, livelli_cuore=(3,4)):
@@ -91,9 +86,9 @@ def estimate_breath_rate(data):
     phase=np.angle(trans)# I get the phase
     trans=abs(trans)# I get the magnitude, it is the Range-Time Map, each row is a frame, each frame is a point in the time (Y-axs=time, X-axis=space)
 
-    #-----------------------------------------------------
-    #HERE YOU NEED TO APPLY THE DC OFFSET CORRECTION 
-    #-----------------------------------------------------
+    #DC OFFSET CORRECTION 
+    dc_offset = np.mean(trans, axis=1, keepdims=True)
+    trans = trans - dc_offset
 
     trans = np.diff(trans, axis=0) #subtract consecutive frames to remove static objects
 
@@ -113,8 +108,7 @@ def estimate_breath_rate(data):
 
     b,a=ellip(4,1,40,[0.1/(FS*0.5),0.5/(FS*0.5)],btype='bandpass')
     filtered_signal_B = filtfilt(b,a,phase_diff) 
-    b,a=ellip(4,1,40,[0.8/(FS*0.5),2/(FS*0.5)],btype='bandpass')
-    filtered_signal_H = filtfilt(b,a,phase_diff)   
+  
 
     resp, HR=dwt(phase_diff)
     resp2= cs_omp_respirazione(filtered_signal_B)
@@ -150,7 +144,7 @@ def printResult(adc_data,numFrames):
 
 def main():
     decoder = AWR1243()
-    path="C:/Users/crist/Desktop/registrazioni/christian4/*"
+    path="C:/Users/crist/Desktop/registrazioni/yosef-x-eleonora/*"
     adc_data = decoder.decode(path)
     print(adc_data.shape)
     printResult(adc_data,adc_data.shape[0])
