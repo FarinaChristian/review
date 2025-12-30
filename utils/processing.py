@@ -5,32 +5,6 @@ from constants.settings import S
 from scipy.signal import medfilt,butter,lfilter,find_peaks
 from scipy.linalg import eigh
 
-def first_fft(data, n_bins, hanning=True, shift=False):
-    """Apply FFT across the ADC samples axis to get range information"""
-    print("Computing fist FFT...")
-    if hanning:
-        data = data * np.hanning(data.shape[-2])[np.newaxis, np.newaxis, :, np.newaxis]
-
-    range_fft = fft(data, n=n_bins, axis=2)
-
-    if shift:
-        range_fft = fftshift(range_fft, axes=2)
-
-    return range_fft
-
-def second_fft(data, n_bins, hanning=True, shift=False):
-    """Apply FFT along the chirps axis to get Doppler information"""
-    print("Computing second FFT...")
-    if hanning:
-        data = data * np.hanning(data.shape[-3])[np.newaxis, :, np.newaxis, np.newaxis]
-
-    doppler_fft = fft(data, n=n_bins, axis=1)
-
-    if shift:
-        doppler_fft = fftshift(doppler_fft, axes=1)
-
-    return doppler_fft
-
 def band_pass_filter_1d(data: np.ndarray, sampling_frequency: float, low_cut: float, high_cut: float) -> np.ndarray:
     """ Applica un filtro passa-banda Butterworth a un array monodimensionale complesso. """
     # Progetta un filtro Butterworth passa-banda
@@ -87,46 +61,25 @@ def music_respiration(sig, fs=25, M=150, num_sources=1, n_freqs=1000):
     
     return freq_peak, freqs, spectrum
 
-def dominant_freq_fft2(sig, fs=25, f_min=0.1, f_max=0.5, zp_factor=8):
-    
-    num_sensors, N = sig.shape
+def heart_rate_fft2d(signals, Fs=25):
+    # FFT 2D
+    F = np.fft.fftshift(np.fft.fft2(signals))
+    mag = np.abs(F)
 
-    # --- 1) Rimozione DC ---
-    sig = sig - np.mean(sig, axis=1, keepdims=True)
-    
-    # --- 2) Finestratura ---
-    window = np.hanning(N)
-    sig = sig * window[None, :]
+    # asse frequenze (tempo)
+    N = signals.shape[1]
+    fx = np.fft.fftshift(np.fft.fftfreq(N, d=1/Fs))
 
-    # --- 3) FFT temporale con zero padding ---
-    Nfft = zp_factor * N   # interpolazione spettrale
-    fft_vals = np.fft.rfft(sig, n=Nfft, axis=1)
-    
-    # --- 4) Power spectrum multi-canale ---
-    spectrum = np.sum(np.abs(fft_vals)**2, axis=0)
+    # rimuovi DC
+    mag[:, N//2] = 0
 
-    # --- 5) Frequenze ---
-    freqs = np.fft.rfftfreq(Nfft, 1/fs)
+    # picco globale
+    _, ix = np.unravel_index(np.argmax(mag), mag.shape)
 
-    # --- 6) Maschera fisiologica ---
-    mask = (freqs >= f_min) & (freqs <= f_max)
+    f_hr = fx[ix]
+    bpm = abs(f_hr) * 60
 
-    spectrum_masked = spectrum[mask]
-    freqs_masked = freqs[mask]
-
-    # --- 7) Picco grezzo ---
-    k = np.argmax(spectrum_masked)
-
-    # --- 8) Interpolazione parabolica del picco ---
-    if 1 <= k < len(spectrum_masked)-1:
-        y0, y1, y2 = spectrum_masked[k-1:k+2]
-        d = 0.5 * (y0 - y2) / (y0 - 2*y1 + y2)
-        freq_peak = freqs_masked[k] + d * (freqs_masked[1] - freqs_masked[0])
-    else:
-        freq_peak = freqs_masked[k]
-
-    return freq_peak, freqs, spectrum
-
+    return bpm
 
 def music(sig_matrix, fs=25, M=150, num_sources=1, n_freqs=10000):
 
