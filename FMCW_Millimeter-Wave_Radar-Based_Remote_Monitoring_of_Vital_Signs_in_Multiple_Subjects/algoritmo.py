@@ -5,7 +5,7 @@ from scipy.signal import ellip,filtfilt, find_peaks
 import matplotlib.pyplot as plt
 from utils.processing import heart_rate_fft2d, music
 # 10.1109RCAR65431.2025.11139413
-FS=25
+FS=20
  
 def preparePhase(phaseMatrix,peak):
     #I get all the phases in the index of the moving object
@@ -65,9 +65,9 @@ def printResult(adc_data,numFrames):
             matriceBr1[3],matriceHr1[3],matriceBr2[3],matriceHr2[3] = estimate_breath_rate(acc3,"ANTENNA 4")
 
             br1, _ , _= music(matriceBr1,FS)
-            hr1=heart_rate_fft2d(matriceHr1)
+            hr1=heart_rate_fft2d(matriceHr1,FS)
             br2, _ , _=music(matriceBr2,FS)
-            hr2=heart_rate_fft2d(matriceHr2)
+            hr2=heart_rate_fft2d(matriceHr2,FS)
 
             print("BR1",br1*60,"HR1",hr1)
             print("BR2",br2*60,"HR2",hr2)
