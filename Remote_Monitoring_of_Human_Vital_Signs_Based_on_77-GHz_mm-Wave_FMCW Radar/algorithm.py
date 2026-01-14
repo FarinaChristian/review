@@ -128,13 +128,10 @@ def printResult(adc_data,numFrames):
         cont+=1
         if cont==numFrames:
             rateH,rateB= estimate_breath_rate(acc)
-            print(f"ANTENNA 1 --> Peaks heart: {rateH} breath: {rateB}")
-            rateH,rateB= estimate_breath_rate(acc1)
-            print(f"ANTENNA 2 --> Peaks heart: {rateH} breath: {rateB}")
-            rateH,rateB= estimate_breath_rate(acc2)
-            print(f"ANTENNA 3 --> Peaks heart: {rateH} breath: {rateB}")
-            rateH,rateB= estimate_breath_rate(acc3)
-            print(f"ANTENNA 4 --> Peaks heart: {rateH} breath: {rateB}")
+            rateH1,rateB1= estimate_breath_rate(acc1)
+            rateH2,rateB2= estimate_breath_rate(acc2)
+            rateH3,rateB3= estimate_breath_rate(acc3)
+            print(f" HR: {(rateH+rateH1+rateH2+rateH3)/4} BR: {(rateB+rateB1+rateB2+rateB3)/4}")
             cont=0
             acc.clear()
             acc1.clear()
