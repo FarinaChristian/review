@@ -2,10 +2,70 @@ from constants.settings import Num_of_chirp_loops
 from decoders.AWR1243 import AWR1243
 import numpy as np
 from scipy.signal import ellip,filtfilt, find_peaks
-import matplotlib.pyplot as plt
-from utils.processing import heart_rate_fft2d, music
+
 # 10.1109RCAR65431.2025.11139413
 FS=20
+
+def music(sig_matrix, fs=25, M=150, num_sources=1, n_freqs=10000):
+    num_sensors, N = sig_matrix.shape
+    L = N - M + 1
+
+    # --- 1) Hankel per ogni sensore ---
+    covariances = []
+
+    for sig in sig_matrix:
+        X = np.zeros((M, L), dtype=complex)
+        for i in range(M):
+            X[i] = sig[i:i+L]
+
+        R = X @ X.conj().T / L # Covarianza del singolo sensore
+        covariances.append(R)
+
+    # --- 2) Media delle covarianze ---
+    R = sum(covariances) / num_sensors
+
+    R += 1e-10 * np.eye(M)# Stabilizzazione numerica
+
+    # --- 3) Decomposizione autovalori ---
+    eigvals, eigvecs = np.linalg.eigh(R)
+    idx = np.argsort(eigvals)[::-1]
+    eigvecs = eigvecs[:, idx]
+
+    E_n = eigvecs[:, num_sources:]   # noise subspace
+
+    # --- 4) MUSIC spectrum ---
+    freqs = np.linspace(0, fs/2, n_freqs)
+
+    m = np.arange(M)
+    A = np.exp(-1j * 2*np.pi * m[:,None] * freqs / fs)
+
+    proj = E_n.conj().T @ A
+    spectrum = 1 / np.sum(np.abs(proj)**2, axis=0)
+
+    spectrum /= spectrum.max() # Normalizzazione
+
+    # --- 5) Picco ---
+    idx_peak = np.argmax(spectrum)
+    freq_peak = freqs[idx_peak]
+
+    return freq_peak, freqs, spectrum
+
+def heart_rate_fft2d(signals, Fs=25):
+    F = np.fft.fftshift(np.fft.fft2(signals)) # FFT 2D
+    mag = np.abs(F)
+
+    # asse frequenze (tempo)
+    N = signals.shape[1]
+    fx = np.fft.fftshift(np.fft.fftfreq(N, d=1/Fs))
+
+    mag[:, N//2] = 0 # rimuovi DC
+
+    _, ix = np.unravel_index(np.argmax(mag), mag.shape) # picco globale
+
+    f_hr = fx[ix]
+    bpm = abs(f_hr) * 60
+
+    return bpm
  
 def preparePhase(phaseMatrix,peak):
     #I get all the phases in the index of the moving object
