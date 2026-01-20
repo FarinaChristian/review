@@ -1,11 +1,60 @@
 from constants.settings import Num_of_chirp_loops
 from decoders.AWR1243 import AWR1243
 import numpy as np
-from utils.processing import music_respiration, remove_baseline_drift,band_pass_filter_1d
 import padasip as pa
+from scipy.signal import medfilt,butter,lfilter
 
 # https://doi.org/10.1038/s41598-024-77683-1
 FS=25
+
+def band_pass_filter_1d(data: np.ndarray, sampling_frequency: float, low_cut: float, high_cut: float) -> np.ndarray:
+    """ Applica un filtro passa-banda Butterworth a un array monodimensionale complesso. """
+    # Progetta un filtro Butterworth passa-banda
+    b, a = butter(N=4, Wn=[low_cut, high_cut], btype='band', fs=sampling_frequency)
+
+    # Applica il filtro separatamente a parte reale e immaginaria
+    filtered_real = lfilter(b, a, data.real)
+    filtered_imag = lfilter(b, a, data.imag)
+
+    # Ricostruisce il segnale complesso
+    return filtered_real + 1j * filtered_imag
+
+def remove_baseline_drift(signal, window_size=101):
+    # Controllo che la finestra sia dispari
+    if window_size % 2 == 0:
+        raise ValueError("La finestra deve essere un numero dispari.")
+
+    if np.iscomplexobj(signal):
+        # Filtra parte reale e immaginaria separatamente
+        b_real = medfilt(signal.real, kernel_size=window_size)
+        b_imag = medfilt(signal.imag, kernel_size=window_size)
+        b_t = b_real + 1j * b_imag
+    else:
+        # Segnale reale
+        b_t = medfilt(signal, kernel_size=window_size)
+
+    # Segnale corretto
+    return signal - b_t
+
+def music_respiration(sig, fs=25, M=150, num_sources=1, n_freqs=1000):
+    
+    N = len(sig)
+    X = np.array([sig[i:N-M+i+1] for i in range(M)])
+
+    R = X @ X.conj().T / X.shape[1]
+    eigvals, eigvecs = np.linalg.eigh(R)
+    idx = eigvals.argsort()[::-1]
+    eigvecs = eigvecs[:, idx]
+    E_n = eigvecs[:, num_sources:]  
+    
+    freqs = np.linspace(0, fs/2, n_freqs)
+    A = np.exp(-1j * 2 * np.pi * np.outer(np.arange(M), freqs/fs))
+    v = E_n.conj().T @ A 
+
+    spectrum = 1 / np.sum(np.abs(v)**2, axis=0)
+    idx_peak = np.argmax(spectrum)
+    freq_peak = freqs[idx_peak]*60
+    return freq_peak, freqs, spectrum
 
 def calculateRate(filtrato):
     phaseFFT=np.fft.fft(filtrato)
@@ -79,7 +128,7 @@ def printResult(adc_data,numFrames):
 
 def main():
     decoder = AWR1243()
-    path="C:/Users/crist/Desktop/registrazioni/brBassa/*"
+    path="C:/Users/crist/Desktop/registrazioni/christian5/*"
     adc_data = decoder.decode(path)
     print(adc_data.shape)
     printResult(adc_data,adc_data.shape[0])
