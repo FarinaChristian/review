@@ -17,3 +17,16 @@ To run the code, move the .py files from those directories into the same directo
 | IWR1443BOOST                                             | 2024 |https://doi.org/10.1038/s41598-024-77683-1|Yes|
 | TI IWR6843 ISK                                           | 2025 |10.1109/RCAR65431.2025.11139413           |Yes|
 | IWR1642BOOST                                             | 2025 |https://doi.org/10.1038/s41598-025-09112-w|Yes|
+
+## Surveys
+
+| Year | DOI                                             |
+| -----|-------------------------------------------------| 
+| 2023 |10.1109/COMST.2023.3298300                       |
+| 2023 |https://doi.org/10.1145/3627161                  |
+| 2024 |10.1109/COMST.2024.3409556                       |
+| 2021 |10.1109/JSEN.2021.3057450                        |
+| 2021 |10.1109/ISAPE54070.2021.9753424                  |
+| 2025 |10.3390/s25030602                                |
+| 2025 |https://doi.org/10.3390/s25123706                |
+| 2025 |https://doi.org/10.1016/j.compeleceng.2025.110696|
