@@ -3,9 +3,10 @@ from decoders.AWR1243 import AWR1243
 import numpy as np
 import padasip as pa
 from scipy.signal import medfilt,butter,lfilter
+import scipy.signal as signal
 
 # https://doi.org/10.1038/s41598-024-77683-1
-FS=25
+FS=20
 
 def band_pass_filter_1d(data: np.ndarray, sampling_frequency: float, low_cut: float, high_cut: float) -> np.ndarray:
     """ Applica un filtro passa-banda Butterworth a un array monodimensionale complesso. """
@@ -87,7 +88,8 @@ def estimate_breath_rate(data):
 
     phase_unwrapped=np.unwrap(arrPhase) 
     differenza=np.diff(phase_unwrapped)
-    filtered_signal_B = band_pass_filter_1d(differenza,FS, 0.1, 0.5)
+    b, a = signal.butter(3, [0.1/(FS/2), 0.5/(FS/2)], btype='band')
+    filtered_signal_B = signal.filtfilt(b, a, differenza)
 
     # this is the new part described in the article
     U=remove_baseline_drift(phase_unwrapped,35)
@@ -96,7 +98,7 @@ def estimate_breath_rate(data):
     y,e,w=filt.run(U[4:],X)# e is U-y
     phase_diff = np.diff(e) 
     
-    picchiH,_, _ = music_respiration(phase_diff)
+    picchiH,_, _ = music_respiration(phase_diff,FS)
     
     return picchiH,calculateRate(filtered_signal_B)
 
@@ -128,7 +130,7 @@ def printResult(adc_data,numFrames):
 
 def main():
     decoder = AWR1243()
-    path="C:/Users/crist/Desktop/registrazioni/christian5/*"
+    path="C:/Users/crist/Desktop/registrazioni/yosef-muhamad-michael4/*"
     adc_data = decoder.decode(path)
     print(adc_data.shape)
     printResult(adc_data,adc_data.shape[0])
