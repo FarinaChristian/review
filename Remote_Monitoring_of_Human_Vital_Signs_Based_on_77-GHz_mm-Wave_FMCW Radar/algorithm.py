@@ -6,6 +6,7 @@ from sklearn.linear_model import OrthogonalMatchingPursuit
 from scipy.fftpack import idct
 import pywt
 
+# 10.3390/s20102999
 FS=25
 
 def dwt(x, wavelet='db5', level=5, livelli_cuore=(3,4)):
