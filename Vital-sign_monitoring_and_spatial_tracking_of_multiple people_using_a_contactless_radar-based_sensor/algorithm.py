@@ -1,16 +1,15 @@
 from constants.settings import Num_of_chirp_loops
 from decoders.AWR1243 import AWR1243
 import numpy as np
-from scipy.signal import cwt, ricker
 from scipy.ndimage import uniform_filter1d
 import pywt
 
 #10.1038/s41928-019-0258-6
-FS=25
+FS=20
 
 def detect_and_attenuate_artifacts(phase_signal, width_range=(1, 72)):
     widths = np.arange(width_range[0], width_range[1])
-    cwt_coeffs = cwt(phase_signal, ricker, widths)
+    cwt_coeffs, _ = pywt.cwt(phase_signal, widths, 'mexh')
     artifact_energy = np.max(np.abs(cwt_coeffs), axis=0)
     
     threshold = np.mean(artifact_energy) + 3 * np.std(artifact_energy)
