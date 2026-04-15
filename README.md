@@ -18,6 +18,109 @@ To run the code, move the .py files from those directories into the same directo
 | TI IWR6843 ISK                                           | 2025 |10.1109/RCAR65431.2025.11139413           |Yes|
 | IWR1642BOOST                                             | 2025 |https://doi.org/10.1038/s41598-025-09112-w|Yes|
 
+## Results
+
+The table below summarizes results obtained by the methodologies on the full `mmStillDataset`. 
+When a paper does not report BR or HR as part of its original output, the corresponding cell is marked `N/A`.
+
+<table>
+  <thead>
+    <tr>
+      <th rowspan="2">Subjects</th>
+      <th rowspan="2"># Exp</th>
+      <th colspan="2">Vital-sign_2019</th>
+      <th colspan="2">wang_2020_remote</th>
+      <th colspan="2">chen_2024_high</th>
+      <th colspan="2">hao_2025_detection</th>
+      <th colspan="2">FMWC</th>
+    </tr>
+    <tr>
+      <th><em>BR MAE</em></th>
+      <th><em>HR MAE</em></th>
+      <th><em>BR MAE</em></th>
+      <th><em>HR MAE</em></th>
+      <th><em>BR MAE</em></th>
+      <th><em>HR MAE</em></th>
+      <th><em>BR MAE</em></th>
+      <th><em>HR MAE</em></th>
+      <th><em>BR MAE</em></th>
+      <th><em>HR MAE</em></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>52</td>
+      <td>0.55</td>
+      <td>30.19</td>
+      <td>0.40</td>
+      <td>24,88</td>
+      <td>N/A</td>
+      <td>-</td>
+      <td>0.82</td>
+      <td>9.18</td>
+      <td>0.45</td>
+      <td>28.16</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>15</td>
+      <td>0.69</td>
+      <td>11.33</td>
+      <td>0.86</td>
+      <td>17.49</td>
+      <td>N/A</td>
+      <td>-</td>
+      <td>0.96</td>
+      <td>12.79</td>
+      <td>0.92</td>
+      <td>19.85</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>15</td>
+      <td>0.51</td>
+      <td>13.81</td>
+      <td>0.64</td>
+      <td>16.20</td>
+      <td>N/A</td>
+      <td>-</td>
+      <td>0.94</td>
+      <td>12.64</td>
+      <td>0.68</td>
+      <td>15.47</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>15</td>
+      <td>0.99</td>
+      <td>14.36</td>
+      <td>0.85</td>
+      <td>16.43</td>
+      <td>N/A</td>
+      <td>-</td>
+      <td>1.05</td>
+      <td>10.12</td>
+      <td>0.91</td>
+      <td>16.74</td>
+    </tr>
+    <tr>
+      <td><strong>Average</strong></td>
+      <td><strong>97</strong></td>
+      <td><strong>0.68</strong></td>
+      <td><strong>17.42</strong></td>
+      <td><strong>0.69</strong></td>
+      <td><strong>18.75</strong></td>
+      <td><strong>N/A</strong></td>
+      <td><strong>-</strong></td>
+      <td><strong>0.94</strong></td>
+      <td><strong>11.18</strong></td>
+      <td><strong>0.74</strong></td>
+      <td><strong>20.06</strong></td>
+    </tr>
+  </tbody>
+</table>
+
 ## Surveys
 
 | Year | DOI                                             |
