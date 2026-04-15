@@ -28,7 +28,7 @@ When a paper does not report BR or HR as part of its original output, the corres
     <tr>
       <th rowspan="2">Subjects</th>
       <th rowspan="2"># Exp</th>
-      <th colspan="2">Vital-sign_2019</th>
+      <th colspan="2">Mercuri_2019_vital</th>
       <th colspan="2">wang_2020_remote</th>
       <th colspan="2">chen_2024_high</th>
       <th colspan="2">hao_2025_detection</th>
